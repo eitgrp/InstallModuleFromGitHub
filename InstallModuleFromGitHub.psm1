@@ -6,6 +6,7 @@ function Install-ModuleFromGitHub {
         [Parameter(ValueFromPipelineByPropertyName)]
         $ProjectUri,
         $DestinationPath,
+		$PSD1Name,
         $SSOToken,
         $moduleName,
         $Scope
@@ -45,7 +46,8 @@ function Install-ModuleFromGitHub {
                 if (-not ($IsLinux -or $IsMacOS)) {
                     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
                 }
-                Invoke-RestMethod $url -OutFile $OutFile -Headers $headers
+                # Write-Host "URL: $url OutFile: $OutFile Headers: $Headers"
+				Invoke-RestMethod $url -OutFile $OutFile -Headers $headers
                 if (-not ([System.Environment]::OSVersion.Platform -eq "Unix")) {
                   Unblock-File $OutFile
                 }
@@ -81,10 +83,25 @@ function Install-ModuleFromGitHub {
                     $dest = $DestinationPath
                 }
                 $dest = Join-Path -Path $dest -ChildPath $targetModuleName
-                if ([System.Environment]::OSVersion.Platform -eq "Unix") {
+                if($PSD1Name) {
+                    If ($PSD1Name.length -gt 5) {
+                        If (($PSD1Name.Substring($PSD1Name.Length - 5, 5)) -ne ".psd1") {
+                            $PSD1Name = "$PSD1Name.psd1"
+                        }
+                    }
+					if ([System.Environment]::OSVersion.Platform -eq "Unix") {
+						$psd1 = Get-ChildItem (Join-Path -Path $unzippedArchive -ChildPath *) -Include $PSD1Name -Recurse
+					} else {
+						# Write-Host "tmpDir: $tmpDir unzippedArchiveName $($unzippedArchive.Name)"
+						$psd1 = Get-ChildItem (Join-Path -Path $tmpDir -ChildPath $unzippedArchive.Name) -Include $PSD1Name -Recurse
+						# Write-Host "psd1: $psd1"			
+					}
+				} elseif ([System.Environment]::OSVersion.Platform -eq "Unix") {
                     $psd1 = Get-ChildItem (Join-Path -Path $unzippedArchive -ChildPath *) -Include *.psd1 -Recurse
                 } else {
-                    $psd1 = Get-ChildItem (Join-Path -Path $tmpDir -ChildPath $unzippedArchive.Name) -Include *.psd1 -Recurse
+                    # Write-Host "tmpDir: $tmpDir unzippedArchiveName $($unzippedArchive.Name)"
+					$psd1 = Get-ChildItem (Join-Path -Path $tmpDir -ChildPath $unzippedArchive.Name) -Include *.psd1 -Recurse
+					# Write-Host "psd1: $psd1"
                 } 
 
                 $sourcePath = $unzippedArchive.FullName
@@ -101,7 +118,8 @@ function Install-ModuleFromGitHub {
                 if ([System.Environment]::OSVersion.Platform -eq "Unix") {
                     $null = Copy-Item "$(Join-Path -Path $unzippedArchive -ChildPath *)" $dest -Force -Recurse
                 } else {
-                    $null = Copy-Item "$sourcePath\*" $dest -Force -Recurse
+                    # Write-Host "SourcePath: $sourcePath Dest: $dest"
+					Copy-Item "$sourcePath\*" $dest -Force -Recurse
                 }
         }
     }
