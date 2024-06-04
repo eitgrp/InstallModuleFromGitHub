@@ -6,7 +6,7 @@ function Install-ModuleFromGitHub {
         [Parameter(ValueFromPipelineByPropertyName)]
         $ProjectUri,
         $DestinationPath,
-		$PSD1Name,
+	$PSD1Name,
         $SSOToken,
         $moduleName,
         $Scope
